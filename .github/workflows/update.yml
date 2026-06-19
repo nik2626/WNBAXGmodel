@@ -1,0 +1,40 @@
+name: Update WNBA Data
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # runs every day at 8am UTC (4am EST)
+  workflow_dispatch:       # lets you trigger it manually anytime
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write      # needed to push data.json back to repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests pbpstats
+
+      - name: Fetch raw data
+        run: python fetch_data.py
+
+      - name: Compute metrics
+        run: python compute_metrics.py
+
+      - name: Commit and push data.json
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git add raw_data.json data.json
+          git diff --staged --quiet || git commit -m "Auto-update WNBA data $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
